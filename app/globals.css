@@ -1,0 +1,336 @@
+/*
+ * Ported 1:1 from /reference/prestocks-recent-buys.html — same tokens,
+ * same structure. The only change is swapping the Google Fonts <link>
+ * for next/font CSS variables (--font-space-grotesk / --font-ibm-plex-mono),
+ * which next/font sets on <html> in app/layout.tsx.
+ */
+
+:root {
+  box-sizing: border-box;
+
+  --ink: #f6f4ef;
+  --panel: #ffffff;
+  --hairline: #e4e0d6;
+  --text-primary: #191a17;
+  --text-secondary: #6b6a62;
+  --gold: #9c7a2e;
+  --gold-soft: #f1e6c9;
+  --emerald: #2f7a5c;
+  --emerald-soft: #e1f0e7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #0f1420;
+    --panel: #151b2c;
+    --hairline: #262e47;
+    --text-primary: #edeff5;
+    --text-secondary: #8993ad;
+    --gold: #d4a857;
+    --gold-soft: #362b14;
+    --emerald: #5ec79a;
+    --emerald-soft: #12281f;
+  }
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text-primary);
+  font-family: var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mono {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+.shell {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- header ---- */
+header {
+  padding: 20px 18px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+.brand-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.brand {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.live-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 0 0 rgba(94, 199, 154, 0.5);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(94, 199, 154, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(94, 199, 154, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(94, 199, 154, 0);
+  }
+}
+.sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+/* ---- ticker ---- */
+.ticker-wrap {
+  border-bottom: 1px solid var(--hairline);
+  overflow: hidden;
+  background: var(--panel);
+  padding: 10px 0;
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: scroll 32s linear infinite;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.tick {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 18px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.tick .sym {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.tick .px {
+  font-weight: 600;
+}
+.tick .chg {
+  font-size: 11px;
+}
+.up {
+  color: var(--emerald);
+}
+.down {
+  color: #c6684f;
+}
+
+/* ---- news panel ---- */
+.news-panel {
+  margin: 14px 18px 4px;
+  padding: 13px 14px;
+  border-radius: 10px;
+  background: var(--gold-soft);
+  border: 1px solid var(--hairline);
+}
+.news-label {
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.news-headline {
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.news-meta {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.news-meta a {
+  color: var(--text-secondary);
+}
+
+.news-tag {
+  display: inline-block;
+  font-size: 10.5px;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border-radius: 5px;
+  padding: 1px 6px;
+  margin-left: 2px;
+}
+
+/* ---- feed ---- */
+.feed-head {
+  padding: 16px 18px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.feed-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.feed-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+ul.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0 18px 18px;
+  flex: 1;
+}
+li.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+  animation: enter 0.4s ease;
+}
+li.row:last-child {
+  border-bottom: none;
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Not in the original prototype (its simulator never rendered an empty
+   list) — added for the cold-start empty state the brief calls out,
+   styled to match the existing row rhythm. */
+.empty-state {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: var(--ink);
+  background: var(--gold);
+}
+
+.row-body {
+  flex: 1;
+  min-width: 0;
+}
+.row-line1 {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.row-line1 .amt {
+  font-weight: 600;
+}
+.row-line1 .sym-inline {
+  font-weight: 600;
+  color: var(--gold);
+}
+.row-line2 {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  display: flex;
+  gap: 8px;
+}
+
+.buy-btn {
+  flex-shrink: 0;
+  display: inline-block;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--gold);
+  border: none;
+  border-radius: 7px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+.buy-btn:active {
+  transform: scale(0.95);
+}
+.buy-btn:hover {
+  opacity: 0.88;
+}
+
+/* ---- footer note ---- */
+.note {
+  margin: 4px 18px 24px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.note strong {
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot,
+  .ticker-track,
+  li.row {
+    animation: none;
+  }
+}
