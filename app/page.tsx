@@ -149,88 +149,118 @@ export default function Home() {
   const news: NewsItem | undefined = NEWS[newsIdx % NEWS.length];
 
   return (
-    <div className="shell">
-      <header>
-        <div className="brand-row">
-          <div className="brand">Recent activity</div>
-          <div className="live-tag">
-            <span className="pulse-dot" />
-            live
-          </div>
+    <div className="site">
+      <header className="site-nav">
+        <div className="site-nav-left">
+          <div className="logo-mark">P</div>
+          <span className="logo-word">PreStocks</span>
+          <span className="unofficial-badge">Unofficial demo</span>
+          <nav className="nav-links">
+            <a className="nav-link" href="https://prestocks.com/products" target="_blank" rel="noopener">
+              Products
+            </a>
+            <span className="nav-link nav-link-static">Ecosystem</span>
+            <span className="nav-link nav-link-static">FAQ</span>
+          </nav>
         </div>
-        <div className="sub">What people are buying across all 8 PreStocks tokens, as it happens.</div>
+        <a className="buy-btn nav-cta" href="https://prestocks.com" target="_blank" rel="noopener">
+          Get PreStocks
+        </a>
       </header>
 
-      <div className="ticker-wrap">
-        <div className="ticker-track">
-          {[...tokens, ...tokens].map((t, i) => (
-            <div className="tick" key={`${t.symbol}-${i}`}>
-              <span className="sym">{t.symbol}</span>
-              <span className="px mono">${t.markPrice.toFixed(2)}</span>
-              <span className={`chg mono ${t.chgPct >= 0 ? "up" : "down"}`}>
-                {t.chgPct >= 0 ? "+" : ""}
-                {t.chgPct.toFixed(1)}%
-              </span>
+      <div className="page-container">
+        <div className="page-intro">
+          <div className="brand-row">
+            <div className="brand">Recent activity</div>
+            <div className="live-tag">
+              <span className="pulse-dot" />
+              live
             </div>
-          ))}
+          </div>
+          <div className="sub">What people are buying across all 8 PreStocks tokens, as it happens.</div>
         </div>
-      </div>
 
-      {news && (
-        <div className="news-panel">
-          <div className="news-label">Why now</div>
-          <div className="news-item">
-            <div className="news-headline">
-              <span className="news-tag">{news.tag}</span> {news.headline}
+        <div className="card ticker-wrap">
+          <div className="ticker-track">
+            {[...tokens, ...tokens].map((t, i) => (
+              <div className="tick" key={`${t.symbol}-${i}`}>
+                <span className="sym">{t.symbol}</span>
+                <span className="px mono">${t.markPrice.toFixed(2)}</span>
+                <span className={`chg mono ${t.chgPct >= 0 ? "up" : "down"}`}>
+                  {t.chgPct >= 0 ? "+" : ""}
+                  {t.chgPct.toFixed(1)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="layout-grid">
+          <div className="main-col">
+            <div className="feed-head">
+              <div className="feed-title">Recent buys</div>
+              <div className="feed-count mono">{buyCount} today</div>
             </div>
-            <div className="news-meta">
-              {news.source} — {news.symbol}
+
+            <div className="card">
+              <ul className="feed">
+                {feed.length === 0 && <li className="empty-state">Watching for activity…</li>}
+                {feed.map((entry) => (
+                  <li className="row" key={entry.id}>
+                    <div className="badge">{entry.initial}</div>
+                    <div className="row-body">
+                      <div className="row-line1">
+                        Someone bought <span className="amt mono">${entry.amount}</span> of{" "}
+                        <span className="sym-inline">{entry.symbol}</span>
+                      </div>
+                      <div className="row-line2">
+                        <span className="timeago">{timeAgo(entry.ts)}</span>
+                        <span>·</span>
+                        <span>{entry.name}</span>
+                      </div>
+                    </div>
+                    <a className="buy-btn" href={entry.url} target="_blank" rel="noopener">
+                      Buy
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="side-col">
+            {news && (
+              <div className="card news-panel">
+                <div className="news-label">Why now</div>
+                <div className="news-item">
+                  <div className="news-headline">
+                    <span className="news-tag">{news.tag}</span> {news.headline}
+                  </div>
+                  <div className="news-meta">
+                    {news.source} — {news.symbol}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="card note">
+              <strong>Demo feed.</strong> Prices and every &quot;Buy&quot; link are real — Buy opens that
+              token&apos;s actual PreStocks page, using the <span className="mono">external_url</span> field the
+              API already returns per token. The buy <em>events</em> themselves are simulated for preview;
+              production reads real swap transactions from each token&apos;s Solana mint address instead (Phase 2
+              — see <span className="mono">INVENTORY.md</span>). The news banner shows real, dated headlines for
+              Anthropic as an example — production pulls these live per company from a news feed rather than
+              hardcoding them. This page is an unofficial hackathon demo, not affiliated with or endorsed by
+              PreStocks.
+              {staleSince !== null && (
+                <>
+                  {" "}
+                  <strong>Prices may be delayed</strong> — last confirmed update {timeAgo(staleSince)}.
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      <div className="feed-head">
-        <div className="feed-title">Recent buys</div>
-        <div className="feed-count mono">{buyCount} today</div>
-      </div>
-
-      <ul className="feed">
-        {feed.length === 0 && <li className="empty-state">Watching for activity…</li>}
-        {feed.map((entry) => (
-          <li className="row" key={entry.id}>
-            <div className="badge">{entry.initial}</div>
-            <div className="row-body">
-              <div className="row-line1">
-                Someone bought <span className="amt mono">${entry.amount}</span> of{" "}
-                <span className="sym-inline">{entry.symbol}</span>
-              </div>
-              <div className="row-line2">
-                <span className="timeago">{timeAgo(entry.ts)}</span>
-                <span>·</span>
-                <span>{entry.name}</span>
-              </div>
-            </div>
-            <a className="buy-btn" href={entry.url} target="_blank" rel="noopener">
-              Buy
-            </a>
-          </li>
-        ))}
-      </ul>
-
-      <div className="note">
-        <strong>Demo feed.</strong> Prices and every &quot;Buy&quot; link are real — Buy opens that token&apos;s
-        actual PreStocks page, using the <span className="mono">external_url</span> field the API already returns
-        per token. The buy <em>events</em> themselves are simulated for preview; production reads real swap
-        transactions from each token&apos;s Solana mint address instead (Phase 2 — see{" "}
-        <span className="mono">INVENTORY.md</span>). The news banner shows real, dated headlines for Anthropic as
-        an example — production pulls these live per company from a news feed rather than hardcoding them.
-        {staleSince !== null && (
-          <>
-            {" "}
-            <strong>Prices may be delayed</strong> — last confirmed update {timeAgo(staleSince)}.
-          </>
-        )}
       </div>
     </div>
   );

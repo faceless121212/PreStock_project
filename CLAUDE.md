@@ -67,6 +67,18 @@ Layout: standard Next.js App Router (`app/`, `app/api/`, `lib/`), plus
 `reference/` (the prototype, read-only — treat it as the frozen visual
 spec, don't edit it) and `INVENTORY.md` (stack decisions).
 
+## Design system
+
+The visual design does **not** follow `/reference/prestocks-recent-buys.html`
+(that prototype's dark gold/emerald theme was the original brief's spec).
+It was superseded: the app now ports the real design tokens from
+`https://prestocks.com/products` (font, colors, radius, shadow, spacing —
+pulled from that page's live computed CSS) so the app reads as one of
+PreStocks' own pages instead. Light-only — their site has no dark mode.
+Tokens live in `app/globals.css` `:root`; don't reintroduce the
+prototype's gold/emerald/dark-mode values without checking with the user
+first, since dropping them was a deliberate, explicit request.
+
 ## Key constraint to remember
 
 The brief's design assumed one long-running Node process. We're deploying
