@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getActiveNews, type NewsItem } from "@/lib/news-seed";
+import { getActiveNews } from "@/lib/news-seed";
 import type { PrestocksToken } from "@/lib/prestocks-api";
 
 type TickerToken = PrestocksToken & { chgPct: number };
@@ -12,15 +12,98 @@ type FeedEntry = {
   name: string;
   amount: number;
   url: string;
+  image: string;
   initial: string;
   ts: number;
 };
 
+/** One rotating banner slot — either a real news item or a "momentum" stat
+ * derived from data already on the page (price movers, feed activity). Both
+ * render through the same markup so the banner reads as one consistent
+ * mechanic, not two bolted-together features. */
+type BannerItem = {
+  kind: "news" | "momentum";
+  tag: string;
+  headline: string;
+  meta: string;
+};
+
 const NEWS = getActiveNews();
+const NEWS_BANNER_ITEMS: BannerItem[] = NEWS.map((n) => ({
+  kind: "news",
+  tag: n.tag,
+  headline: n.headline,
+  meta: `${n.source} — ${n.symbol}`,
+}));
 const BUY_BUCKETS = [25, 50, 75, 100, 150, 200, 300, 500, 750, 1200];
+const BANNER_ROTATE_MS = 8000;
 
 function initialOf(name: string) {
   return name.trim().charAt(0).toUpperCase() || "?";
+}
+
+function biggestMoverItem(tokens: TickerToken[]): BannerItem | null {
+  if (tokens.length === 0) return null;
+  const top = tokens.reduce((a, b) => (Math.abs(b.chgPct) > Math.abs(a.chgPct) ? b : a));
+  const sign = top.chgPct >= 0 ? "+" : "";
+  return {
+    kind: "momentum",
+    tag: "Momentum",
+    headline: `${top.symbol} is ${top.chgPct >= 0 ? "up" : "down"} ${sign}${top.chgPct.toFixed(1)}% since the last price update.`,
+    meta: `Live from PreStocks — ${top.name}`,
+  };
+}
+
+function mostActiveItem(feed: FeedEntry[], buyCount: number): BannerItem | null {
+  if (feed.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const entry of feed) counts.set(entry.symbol, (counts.get(entry.symbol) ?? 0) + 1);
+  let topSymbol = feed[0].symbol;
+  let topCount = 0;
+  for (const [symbol, count] of counts) {
+    if (count > topCount) {
+      topCount = count;
+      topSymbol = symbol;
+    }
+  }
+  return {
+    kind: "momentum",
+    tag: "Trending",
+    headline: `${topSymbol} leads the feed with ${topCount} of the last ${feed.length} buys shown below.`,
+    meta: `${buyCount} buys today across all tokens`,
+  };
+}
+
+/** Interleaves news and momentum items so the rotation alternates between
+ * the two mechanics rather than running through one type, then the other. */
+function buildBannerItems(tokens: TickerToken[], feed: FeedEntry[], buyCount: number): BannerItem[] {
+  const momentumItems = [biggestMoverItem(tokens), mostActiveItem(feed, buyCount)].filter(
+    (item): item is BannerItem => item !== null,
+  );
+  const combined: BannerItem[] = [];
+  const rounds = Math.max(NEWS_BANNER_ITEMS.length, momentumItems.length);
+  for (let i = 0; i < rounds; i++) {
+    if (NEWS_BANNER_ITEMS[i]) combined.push(NEWS_BANNER_ITEMS[i]);
+    if (momentumItems[i]) combined.push(momentumItems[i]);
+  }
+  return combined.length > 0 ? combined : NEWS_BANNER_ITEMS;
+}
+
+function TokenBadge({ image, alt, initial }: { image: string; alt: string; initial: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!image || failed) {
+    return <div className="badge badge-fallback">{initial}</div>;
+  }
+  return (
+    <div className="badge badge-icon">
+      {/* Real per-token logos from the PreStocks API's `image` field. Plain
+          <img>, not next/image: these are 34px badges from an external
+          domain we don't control, and a plain onError fallback is simpler
+          than configuring remotePatterns for one small icon. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image} alt={alt} onError={() => setFailed(true)} />
+    </div>
+  );
 }
 
 function timeAgo(ts: number) {
@@ -38,7 +121,7 @@ function randomBucket() {
 export default function Home() {
   const [tokens, setTokens] = useState<TickerToken[]>([]);
   const [staleSince, setStaleSince] = useState<number | null>(null);
-  const [newsIdx, setNewsIdx] = useState(0);
+  const [bannerIdx, setBannerIdx] = useState(0);
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [buyCount, setBuyCount] = useState(0);
   const [, forceTick] = useState(0);
@@ -82,9 +165,10 @@ export default function Home() {
     };
   }, []);
 
-  // News banner rotation, every 6s — same cadence as the prototype.
+  // Banner rotation: alternates real news headlines with "momentum" stats
+  // computed from live price/feed data (see buildBannerItems above).
   useEffect(() => {
-    const id = setInterval(() => setNewsIdx((i) => i + 1), 6000);
+    const id = setInterval(() => setBannerIdx((i) => i + 1), BANNER_ROTATE_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -104,6 +188,7 @@ export default function Home() {
         name: t.name,
         amount: randomBucket(),
         url: t.external_url,
+        image: t.image,
         initial: initialOf(t.name),
         ts: Date.now() - minsAgo * 60_000,
       };
@@ -124,6 +209,7 @@ export default function Home() {
             name: t.name,
             amount: randomBucket(),
             url: t.external_url,
+            image: t.image,
             initial: initialOf(t.name),
             ts: Date.now(),
           };
@@ -146,7 +232,8 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
-  const news: NewsItem | undefined = NEWS[newsIdx % NEWS.length];
+  const bannerItems = buildBannerItems(tokens, feed, buyCount);
+  const activeBanner = bannerItems[bannerIdx % bannerItems.length];
 
   return (
     <div className="site">
@@ -207,7 +294,7 @@ export default function Home() {
                 {feed.length === 0 && <li className="empty-state">Watching for activity…</li>}
                 {feed.map((entry) => (
                   <li className="row" key={entry.id}>
-                    <div className="badge">{entry.initial}</div>
+                    <TokenBadge image={entry.image} alt={entry.name} initial={entry.initial} />
                     <div className="row-body">
                       <div className="row-line1">
                         Someone bought <span className="amt mono">${entry.amount}</span> of{" "}
@@ -229,16 +316,14 @@ export default function Home() {
           </div>
 
           <div className="side-col">
-            {news && (
-              <div className="card news-panel">
+            {activeBanner && (
+              <div className="card news-panel" key={bannerIdx}>
                 <div className="news-label">Why now</div>
                 <div className="news-item">
                   <div className="news-headline">
-                    <span className="news-tag">{news.tag}</span> {news.headline}
+                    <span className="news-tag">{activeBanner.tag}</span> {activeBanner.headline}
                   </div>
-                  <div className="news-meta">
-                    {news.source} — {news.symbol}
-                  </div>
+                  <div className="news-meta">{activeBanner.meta}</div>
                 </div>
               </div>
             )}
