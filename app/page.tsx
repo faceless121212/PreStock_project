@@ -26,6 +26,10 @@ type BannerItem = {
   tag: string;
   headline: string;
   meta: string;
+  /** Which token this item is "about" — drives the quick-buy panel's
+   * featured token so it stays consistent with whatever the banner is
+   * currently showing. */
+  symbol: string;
 };
 
 const NEWS = getActiveNews();
@@ -34,6 +38,7 @@ const NEWS_BANNER_ITEMS: BannerItem[] = NEWS.map((n) => ({
   tag: n.tag,
   headline: n.headline,
   meta: `${n.source} — ${n.symbol}`,
+  symbol: n.symbol,
 }));
 const BUY_BUCKETS = [25, 50, 75, 100, 150, 200, 300, 500, 750, 1200];
 const BANNER_ROTATE_MS = 8000;
@@ -51,6 +56,7 @@ function biggestMoverItem(tokens: TickerToken[]): BannerItem | null {
     tag: "Momentum",
     headline: `${top.symbol} is ${top.chgPct >= 0 ? "up" : "down"} ${sign}${top.chgPct.toFixed(1)}% since the last price update.`,
     meta: `Live from PreStocks — ${top.name}`,
+    symbol: top.symbol,
   };
 }
 
@@ -71,6 +77,7 @@ function mostActiveItem(feed: FeedEntry[], buyCount: number): BannerItem | null 
     tag: "Trending",
     headline: `${topSymbol} leads the feed with ${topCount} of the last ${feed.length} buys shown below.`,
     meta: `${buyCount} buys today across all tokens`,
+    symbol: topSymbol,
   };
 }
 
@@ -106,6 +113,42 @@ function TokenBadge({ image, alt, initial }: { image: string; alt: string; initi
   );
 }
 
+/** Inline explainer — shows its popover on hover (desktop, via CSS) and on
+ * tap (touch devices, via the click-toggled `open` class + outside-click
+ * to close), since a hover-only tooltip is unusable on mobile. */
+function InfoTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("click", onOutsideClick);
+    return () => document.removeEventListener("click", onOutsideClick);
+  }, [open]);
+
+  return (
+    <span className={`info-tooltip ${open ? "open" : ""}`} ref={ref}>
+      <button
+        type="button"
+        className="info-tooltip-trigger"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+      >
+        {label} <span aria-hidden="true">ⓘ</span>
+      </button>
+      <span className="info-tooltip-popover" role="tooltip">
+        {children}
+      </span>
+    </span>
+  );
+}
+
 function timeAgo(ts: number) {
   const secs = Math.floor((Date.now() - ts) / 1000);
   if (secs < 45) return "just now";
@@ -124,11 +167,13 @@ export default function Home() {
   const [bannerIdx, setBannerIdx] = useState(0);
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [buyCount, setBuyCount] = useState(0);
+  const [countPulse, setCountPulse] = useState(false);
   const [, forceTick] = useState(0);
 
   const prevPrices = useRef<Map<string, number>>(new Map());
   const tokensRef = useRef<TickerToken[]>([]);
   const seededRef = useRef(false);
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     tokensRef.current = tokens;
@@ -215,12 +260,20 @@ export default function Home() {
           };
           setFeed((prev) => [entry, ...prev].slice(0, 20));
           setBuyCount((c) => c + 1);
+          // Pulse only on real increments, never on the initial seed above
+          // — "no visual change on page load, only on actual increments."
+          setCountPulse(true);
+          clearTimeout(pulseTimeoutRef.current);
+          pulseTimeoutRef.current = setTimeout(() => setCountPulse(false), 500);
         }
         scheduleNext();
       }, delay);
     }
     scheduleNext();
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(pulseTimeoutRef.current);
+    };
     // Intentionally only re-runs on the 0 -> populated transition (first
     // load); scheduleNext reads live data via tokensRef, not this closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,6 +287,7 @@ export default function Home() {
 
   const bannerItems = buildBannerItems(tokens, feed, buyCount);
   const activeBanner = bannerItems[bannerIdx % bannerItems.length];
+  const featuredToken = tokens.find((t) => t.symbol === activeBanner?.symbol) ?? tokens[0];
 
   return (
     <div className="site">
@@ -282,11 +336,61 @@ export default function Home() {
           </div>
         </div>
 
+        {activeBanner && (
+          <div className="card news-panel" key={bannerIdx}>
+            <div className="news-label">Why now</div>
+            <div className="news-item">
+              <div className="news-headline">
+                <span className="news-tag">{activeBanner.tag}</span> {activeBanner.headline}
+              </div>
+              <div className="news-meta">{activeBanner.meta}</div>
+            </div>
+          </div>
+        )}
+
+        {featuredToken && (
+          <div className="card quickbuy-panel">
+            <div className="quickbuy-copy">
+              <div className="quickbuy-title">
+                New to PreStocks?
+                <InfoTooltip label="What is a PreStocks token?">
+                  PreStocks are tokens that track the price of a private company. They don&apos;t grant equity,
+                  voting, or dividend rights — just price exposure. Traded on-chain via Jupiter (Solana); no KYC
+                  required.
+                </InfoTooltip>
+              </div>
+              <div className="quickbuy-trust">
+                No annual management fees · Settles on-chain in seconds · No KYC required
+              </div>
+            </div>
+            <div className="quickbuy-actions">
+              <a
+                className="buy-btn quickbuy-cta"
+                href={featuredToken.external_url}
+                target="_blank"
+                rel="noopener"
+              >
+                Get {featuredToken.symbol}
+              </a>
+              <a
+                className="buy-btn quickbuy-cta quickbuy-cta-secondary"
+                href={featuredToken.external_url}
+                target="_blank"
+                rel="noopener"
+              >
+                Buy $10 to try it
+              </a>
+            </div>
+          </div>
+        )}
+
         <div className="layout-grid">
           <div className="main-col">
             <div className="feed-head">
               <div className="feed-title">Recent buys</div>
-              <div className="feed-count mono">{buyCount} today</div>
+              <div className={`feed-count mono ${countPulse ? "pulse" : ""}`}>
+                {tokens.length > 0 ? `${buyCount} buys today across ${tokens.length} tokens` : "Loading activity…"}
+              </div>
             </div>
 
             <div className="card">
@@ -316,18 +420,6 @@ export default function Home() {
           </div>
 
           <div className="side-col">
-            {activeBanner && (
-              <div className="card news-panel" key={bannerIdx}>
-                <div className="news-label">Why now</div>
-                <div className="news-item">
-                  <div className="news-headline">
-                    <span className="news-tag">{activeBanner.tag}</span> {activeBanner.headline}
-                  </div>
-                  <div className="news-meta">{activeBanner.meta}</div>
-                </div>
-              </div>
-            )}
-
             <div className="card note">
               <strong>Demo feed.</strong> Prices and every &quot;Buy&quot; link are real — Buy opens that
               token&apos;s actual PreStocks page, using the <span className="mono">external_url</span> field the
@@ -335,8 +427,9 @@ export default function Home() {
               production reads real swap transactions from each token&apos;s Solana mint address instead (Phase 2
               — see <span className="mono">INVENTORY.md</span>). The news banner shows real, dated headlines for
               Anthropic as an example — production pulls these live per company from a news feed rather than
-              hardcoding them. This page is an unofficial hackathon demo, not affiliated with or endorsed by
-              PreStocks.
+              hardcoding them. The &quot;Buy $10 to try it&quot; button links to the same token page as the main
+              Buy button — there&apos;s no separate $10 checkout, since this demo doesn&apos;t build a purchase
+              flow. This page is an unofficial hackathon demo, not affiliated with or endorsed by PreStocks.
               {staleSince !== null && (
                 <>
                   {" "}
