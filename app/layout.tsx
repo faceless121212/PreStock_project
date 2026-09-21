@@ -16,7 +16,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+      {/* Some browser extensions inject attributes (e.g. overscroll-behavior-x)
+          onto <body> before React hydrates. Confirmed nothing in this app sets
+          that — suppressing only this element's attribute-mismatch warning,
+          not the subtree, so a real mismatch elsewhere still surfaces. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
