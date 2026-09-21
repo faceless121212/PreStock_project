@@ -8,6 +8,8 @@ export type PrestocksToken = {
   impliedValuation: number;
   supply: number;
   external_url: string;
+  /** Per-token logo, e.g. https://www.prestocks.com/logos/anduril.png */
+  image: string;
 };
 
 const PRESTOCKS_API_URL = "https://prestocks.com/api/prestocks";

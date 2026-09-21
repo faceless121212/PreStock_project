@@ -12,6 +12,7 @@ function makeToken(overrides: Partial<PrestocksToken> = {}): PrestocksToken {
     impliedValuation: 965_000_000_000,
     supply: 9_650_000_000,
     external_url: "https://prestocks.com/anthropic",
+    image: "https://www.prestocks.com/logos/anthropic.png",
     ...overrides,
   };
 }

@@ -13,6 +13,7 @@ const fakeTokens = [
     impliedValuation: 965_000_000_000,
     supply: 9_650_000_000,
     external_url: "https://prestocks.com/anthropic",
+    image: "https://www.prestocks.com/logos/anthropic.png",
   },
   {
     name: "OpenAI",
@@ -24,6 +25,7 @@ const fakeTokens = [
     impliedValuation: 500_000_000_000,
     supply: 10_000_000_000,
     external_url: "https://prestocks.com/openai",
+    image: "https://www.prestocks.com/logos/openai.png",
   },
   {
     name: "SpaceX",
@@ -35,6 +37,7 @@ const fakeTokens = [
     impliedValuation: 400_000_000_000,
     supply: 2_000_000_000,
     external_url: "https://prestocks.com/spacex",
+    image: "https://www.prestocks.com/logos/spacex.png",
   },
 ];
 
